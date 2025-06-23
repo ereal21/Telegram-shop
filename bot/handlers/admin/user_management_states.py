@@ -20,12 +20,12 @@ async def user_callback_handler(call: CallbackQuery):
     TgConfig.STATE[user_id] = 'user_id_for_check'
     role = check_role(user_id)
     if role >= Permission.USERS_MANAGE:
-        await bot.edit_message_text('👤 Введите id пользователя,\nчтобы посмотреть | изменить его данные',
+        await bot.edit_message_text('👤 Enter the user id to view or modify the profile',
                                     chat_id=call.message.chat.id,
                                     message_id=call.message.message_id,
                                     reply_markup=back('console'))
         return
-    await call.answer('Недостаточно прав')
+    await call.answer('Insufficient permissions')
 
 
 async def check_user_data(message: Message):
@@ -39,18 +39,18 @@ async def check_user_data(message: Message):
     if not message.text.isdigit():
         await bot.edit_message_text(chat_id=message.chat.id,
                                     message_id=message_id,
-                                    text='⚠️ Введите корректный числовой ID пользователя.',
+                                    text='⚠️ Enter a valid numeric user ID.',
                                     reply_markup=back('console'))
         return
     if not user:
         await bot.edit_message_text(chat_id=message.chat.id,
                                     message_id=message_id,
-                                    text='❌ Профиль недоступен (такого пользователя никогда не существовало)',
+                                    text='❌ Profile is unavailable (the user never existed)',
                                     reply_markup=back('console'))
         return
     await bot.edit_message_text(chat_id=message.chat.id,
                                 message_id=message_id,
-                                text=f"Вы точно хотите посмотреть профиль пользователя {user.telegram_id}?",
+                                text=f"Are you sure you want to view user {user.telegram_id}'s profile?",
                                 parse_mode='HTML',
                                 reply_markup=user_manage_check(user.telegram_id))
 
@@ -74,15 +74,15 @@ async def user_profile_view(call: CallbackQuery):
     referrals = check_user_referrals(user.telegram_id)
     await bot.edit_message_text(chat_id=call.message.chat.id,
                                 message_id=call.message.message_id,
-                                text=f"👤 <b>Профиль</b> — {user_info.first_name}\n\n🆔"
+                                text=f"👤 <b>Profile</b> — {user_info.first_name}\n\n🆔"
                                      f" <b>ID</b> — <code>{user_id}</code>\n"
-                                     f"💳 <b>Баланс</b> — <code>{user.balance}</code> ₽\n"
-                                     f"💵 <b>Всего пополнено</b> — <code>{overall_balance}</code> ₽\n"
-                                     f"🎁 <b>Куплено товаров</b> — {items} шт\n\n"
-                                     f"👤 <b>Реферал</b> — <code>{user.referral_id}</code>\n"
-                                     f"👥 <b>Рефералы пользователя</b> — {referrals}\n"
-                                     f"🎛 <b>Роль</b> — {role}\n"
-                                     f"🕢 <b>Дата регистрации</b> — <code>{user.registration_date}</code>\n",
+                                     f"💳 <b>Balance</b> — <code>{user.balance}</code> €\n"
+                                     f"💵 <b>Total topped up</b> — <code>{overall_balance}</code> €\n"
+                                     f"🎁 <b>Items bought</b> — {items} pcs\n\n"
+                                     f"👤 <b>Referrer</b> — <code>{user.referral_id}</code>\n"
+                                     f"👥 <b>User referrals</b> — {referrals}\n"
+                                     f"🎛 <b>Role</b> — {role}\n"
+                                     f"🕢 <b>Registration date</b> — <code>{user.registration_date}</code>\n",
                                 parse_mode='HTML',
                                 reply_markup=user_management(admin_permissions,
                                                              user_permissions, Permission.ADMINS_MANAGE, items,
@@ -102,10 +102,10 @@ async def user_items_callback_handler(call: CallbackQuery):
             max_index -= 1
         keyboard = user_items_list(bought_goods, user_data, f'check-user_{user_data}',
                                    f'user-items_{user_data}', 0, max_index)
-        await bot.edit_message_text('Товары пользователя:', chat_id=call.message.chat.id,
+        await bot.edit_message_text('User items:', chat_id=call.message.chat.id,
                                     message_id=call.message.message_id, reply_markup=keyboard)
         return
-    await call.answer('Недостаточно прав')
+    await call.answer('Insufficient permissions')
 
 
 async def process_admin_for_purpose(call: CallbackQuery):
@@ -117,19 +117,19 @@ async def process_admin_for_purpose(call: CallbackQuery):
         set_role(user_data, 2)
         await bot.edit_message_text(chat_id=call.message.chat.id,
                                     message_id=call.message.message_id,
-                                    text=f'✅ Роль присвоена пользователю {user_info.first_name}',
+                                    text=f'✅ Role assigned to {user_info.first_name}',
                                     reply_markup=back(f'check-user_{user_data}'))
         try:
             await bot.send_message(chat_id=user_data,
-                                   text='✅ Вам присвоена роль АДМИНИСТРАТОРА бота',
+                                   text='✅ You have been granted bot administrator rights',
                                    reply_markup=close())
         except BotBlocked:
             pass
         admin_info = await bot.get_chat(user_id)
-        logger.info(f"Пользователь {user_id} ({admin_info.first_name}) "
-                    f"назначил пользователя {user_data} ({user_info.first_name}) администратором")
+        logger.info(f"User {user_id} ({admin_info.first_name}) "
+                    f"granted admin role to {user_data} ({user_info.first_name})")
         return
-    await call.answer('Недостаточно прав')
+    await call.answer('Insufficient permissions')
 
 
 async def process_admin_for_remove(call: CallbackQuery):
@@ -141,19 +141,19 @@ async def process_admin_for_remove(call: CallbackQuery):
         set_role(user_data, 1)
         await bot.edit_message_text(chat_id=call.message.chat.id,
                                     message_id=call.message.message_id,
-                                    text=f'✅ Роль отозвана у пользователя {user_info.first_name}',
+                                    text=f'✅ Role revoked from {user_info.first_name}',
                                     reply_markup=back(f'check-user_{user_data}'))
         try:
             await bot.send_message(chat_id=user_data,
-                                   text='❌ У вас отозвана роль АДМИНИСТРАТОРА бота',
+                                   text='❌ Your bot administrator rights have been revoked',
                                    reply_markup=close())
         except BotBlocked:
             pass
         admin_info = await bot.get_chat(user_id)
-        logger.info(f"Пользователь {user_id} ({admin_info.first_name}) "
-                    f"отозвал роль администратора у пользователя {user_data} ({user_info.first_name})")
+        logger.info(f"User {user_id} ({admin_info.first_name}) "
+                    f"revoked admin role from {user_data} ({user_info.first_name})")
         return
-    await call.answer('Недостаточно прав')
+    await call.answer('Insufficient permissions')
 
 
 async def replenish_user_balance_callback_handler(call: CallbackQuery):
@@ -165,10 +165,10 @@ async def replenish_user_balance_callback_handler(call: CallbackQuery):
     if role >= Permission.USERS_MANAGE:
         await bot.edit_message_text(chat_id=call.message.chat.id,
                                     message_id=call.message.message_id,
-                                    text='💰 Введите сумму для пополнения:',
+                                    text='💰 Enter the amount to credit:',
                                     reply_markup=back(f'check-user_{user_data}'))
         return
-    await call.answer('Недостаточно прав')
+    await call.answer('Insufficient permissions')
 
 
 async def process_replenish_user_balance(message: Message):
@@ -181,8 +181,8 @@ async def process_replenish_user_balance(message: Message):
     if not message.text.isdigit() or int(message.text) < 10 or int(message.text) > 10000:
         await bot.edit_message_text(chat_id=message.chat.id,
                                     message_id=message_id,
-                                    text="❌ Неверная сумма пополнения. "
-                                         "Сумма пополнения должна быть числом не меньше 10₽ и не более 10 000₽",
+                                    text="❌ Invalid top-up amount. "
+                                         "The amount must be between 10 and 10 000€",
                                     reply_markup=back(f'check-user_{user_data}'))
         return
     current_time = datetime.datetime.now()
@@ -192,14 +192,14 @@ async def process_replenish_user_balance(message: Message):
     user_info = await bot.get_chat(user_data)
     await bot.edit_message_text(chat_id=message.chat.id,
                                 message_id=message_id,
-                                text=f'✅ Баланс пользователя {user_info.first_name} пополнен на {msg}₽',
+                                text=f'✅ {user_info.first_name}\'s balance credited by {msg}€',
                                 reply_markup=back(f'check-user_{user_data}'))
     admin_info = await bot.get_chat(user_id)
-    logger.info(f"Пользователь {user_id} ({admin_info.first_name}) "
-                f"пополнил баланс пользователя {user_data} ({user_info.first_name}) на {msg}р")
+    logger.info(f"User {user_id} ({admin_info.first_name}) "
+                f"credited {user_data} ({user_info.first_name}) with {msg}€")
     try:
         await bot.send_message(chat_id=user_data,
-                               text=f'✅ Ваш баланс пополнен на {msg}₽',
+                               text=f'✅ Your balance has been credited by {msg}€',
                                reply_markup=close())
     except BotBlocked:
         pass
