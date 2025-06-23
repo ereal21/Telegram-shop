@@ -16,7 +16,7 @@ async def console_callback_handler(call: CallbackQuery):
     TgConfig.STATE[user_id] = None
     role = check_role(user_id)
     if role > 1:
-        await bot.edit_message_text('⛩️ Меню администратора',
+        await bot.edit_message_text('⛩️ Administrator menu',
                                     chat_id=call.message.chat.id,
                                     message_id=call.message.message_id,
                                     reply_markup=console())

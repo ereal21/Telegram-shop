@@ -43,7 +43,7 @@ async def start(message: Message):
             if not await check_sub_channel(chat_member):
                 markup = check_sub(chat)
                 await bot.send_message(user_id,
-                                       'Для начала подпишитесь на новостной канал',
+                                       'To start, subscribe to the news channel',
                                        reply_markup=markup)
                 await bot.delete_message(chat_id=message.chat.id,
                                          message_id=message.message_id)
@@ -54,7 +54,7 @@ async def start(message: Message):
 
     markup = main_menu(role_data, chat, TgConfig.HELPER_URL)
     await bot.send_message(user_id,
-                           '⛩️ Основное меню',
+                           '⛩️ Main menu',
                            reply_markup=markup)
     await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
 
@@ -63,7 +63,7 @@ async def back_to_menu_callback_handler(call: CallbackQuery):
     bot, user_id = await get_bot_user_ids(call)
     user = check_user(call.from_user.id)
     markup = main_menu(user.role_id, TgConfig.CHANNEL_URL, TgConfig.HELPER_URL)
-    await bot.edit_message_text('⛩️ Основное меню',
+    await bot.edit_message_text('⛩️ Main menu',
                                 chat_id=call.message.chat.id,
                                 message_id=call.message.message_id,
                                 reply_markup=markup)
@@ -83,7 +83,7 @@ async def shop_callback_handler(call: CallbackQuery):
     if len(categories) % 10 == 0:
         max_index -= 1
     markup = categories_list(categories, 0, max_index)
-    await bot.edit_message_text('🏪 Категории магазина',
+    await bot.edit_message_text('🏪 Shop categories',
                                 chat_id=call.message.chat.id,
                                 message_id=call.message.message_id,
                                 reply_markup=markup)
@@ -100,11 +100,11 @@ async def navigate_categories(call: CallbackQuery):
         markup = categories_list(categories, current_index, max_index)
         await bot.edit_message_text(message_id=call.message.message_id,
                                     chat_id=call.message.chat.id,
-                                    text='🏪 Категории магазина',
+                                    text='🏪 Shop categories',
                                     reply_markup=markup)
     else:
         await bot.answer_callback_query(callback_query_id=call.id,
-                                        text="❌ Такой страницы нет")
+                                        text="❌ Page not found")
 
 
 async def dummy_button(call: CallbackQuery):
@@ -121,7 +121,7 @@ async def items_list_callback_handler(call: CallbackQuery):
     if len(goods) % 10 == 0:
         max_index -= 1
     markup = goods_list(goods, category_name, 0, max_index)
-    await bot.edit_message_text('🏪 выберите нужный товар', chat_id=call.message.chat.id,
+    await bot.edit_message_text('🏪 Select a product', chat_id=call.message.chat.id,
                                 message_id=call.message.message_id, reply_markup=markup)
 
 
@@ -137,10 +137,10 @@ async def navigate_goods(call: CallbackQuery):
         markup = goods_list(goods, category_name, current_index, max_index)
         await bot.edit_message_text(message_id=call.message.message_id,
                                     chat_id=call.message.chat.id,
-                                    text='🏪 выберите нужный товар',
+                                    text='🏪 Select a product',
                                     reply_markup=markup)
     else:
-        await bot.answer_callback_query(callback_query_id=call.id, text="❌ Такой страницы нет")
+        await bot.answer_callback_query(callback_query_id=call.id, text="❌ Page not found")
 
 
 async def item_info_callback_handler(call: CallbackQuery):
@@ -149,14 +149,14 @@ async def item_info_callback_handler(call: CallbackQuery):
     TgConfig.STATE[user_id] = None
     item_info_list = get_item_info(item_name)
     category = item_info_list['category_name']
-    quantity = 'Количество - неограниченно'
+    quantity = 'Quantity - unlimited'
     if not check_value(item_name):
-        quantity = f'Количество - {select_item_values_amount(item_name)}шт.'
+        quantity = f'Quantity - {select_item_values_amount(item_name)}pcs.'
     markup = item_info(item_name, category)
     await bot.edit_message_text(
-        f'🏪 Товар {item_name}\n'
-        f'Описание: {item_info_list["description"]}\n'
-        f'Цена - {item_info_list["price"]}₽\n'
+        f'🏪 Item {item_name}\n'
+        f'Description: {item_info_list["description"]}\n'
+        f'Price - {item_info_list["price"]}€\n'
         f'{quantity}',
         chat_id=call.message.chat.id,
         message_id=call.message.message_id,
@@ -182,24 +182,24 @@ async def buy_item_callback_handler(call: CallbackQuery):
             new_balance = buy_item_for_balance(user_id, item_price)
             await bot.edit_message_text(chat_id=call.message.chat.id,
                                         message_id=msg,
-                                        text=f'✅ Товар куплен. '
-                                             f'<b>Баланс</b>: <i>{new_balance}</i>₽\n\n{value_data["value"]}',
+                                        text=f'✅ Item purchased. '
+                                             f'<b>Balance</b>: <i>{new_balance}</i>€\n\n{value_data["value"]}',
                                         parse_mode='HTML',
                                         reply_markup=back(f'item_{item_name}'))
             user_info = await bot.get_chat(user_id)
-            logger.info(f"Пользователь {user_id} ({user_info.first_name})"
-                        f" купил 1 товар позиции {value_data['item_name']} за {item_price}р")
+            logger.info(f"User {user_id} ({user_info.first_name})"
+                        f" bought 1 item of {value_data['item_name']} for {item_price}€")
             return
 
         await bot.edit_message_text(chat_id=call.message.chat.id,
                                     message_id=msg,
-                                    text='❌ Товара нет в  наличие',
+                                    text='❌ Item out of stock',
                                     reply_markup=back(f'item_{item_name}'))
         return
 
     await bot.edit_message_text(chat_id=call.message.chat.id,
                                 message_id=msg,
-                                text='❌ Недостаточно средств',
+                                text='❌ Insufficient funds',
                                 reply_markup=back(f'item_{item_name}'))
 
 
@@ -212,7 +212,7 @@ async def bought_items_callback_handler(call: CallbackQuery):
     if len(goods) % 10 == 0:
         max_index -= 1
     markup = user_items_list(bought_goods, 'user', 'profile', 'bought_items', 0, max_index)
-    await bot.edit_message_text('Ваши товары:', chat_id=call.message.chat.id,
+    await bot.edit_message_text('Your items:', chat_id=call.message.chat.id,
                                 message_id=call.message.message_id, reply_markup=markup)
 
 
@@ -235,10 +235,10 @@ async def navigate_bought_items(call: CallbackQuery):
         markup = user_items_list(bought_goods, data, back_data, pre_back, current_index, max_index)
         await bot.edit_message_text(message_id=call.message.message_id,
                                     chat_id=call.message.chat.id,
-                                    text='Ваши товары:',
+                                    text='Your items:',
                                     reply_markup=markup)
     else:
-        await bot.answer_callback_query(callback_query_id=call.id, text="❌ Такой страницы нет")
+        await bot.answer_callback_query(callback_query_id=call.id, text="❌ Page not found")
 
 
 async def bought_item_info_callback_handler(call: CallbackQuery):
@@ -248,11 +248,11 @@ async def bought_item_info_callback_handler(call: CallbackQuery):
     TgConfig.STATE[user_id] = None
     item = get_bought_item_info(item_id)
     await bot.edit_message_text(
-        f'<b>Товар</b>: <code>{item["item_name"]}</code>\n'
-        f'<b>Цена</b>: <code>{item["price"]}</code>₽\n'
-        f'<b>Дата покупки</b>: <code>{item["bought_datetime"]}</code>\n'
-        f'<b>Уникальный ID</b>: <code>{item["unique_id"]}</code>\n'
-        f'<b>Значение</b>:\n<code>{item["value"]}</code>',
+        f'<b>Item</b>: <code>{item["item_name"]}</code>\n'
+        f'<b>Price</b>: <code>{item["price"]}</code>€\n'
+        f'<b>Purchase date</b>: <code>{item["bought_datetime"]}</code>\n'
+        f'<b>Unique ID</b>: <code>{item["unique_id"]}</code>\n'
+        f'<b>Value</b>:\n<code>{item["value"]}</code>',
         chat_id=call.message.chat.id,
         message_id=call.message.message_id,
         parse_mode='HTML',
@@ -269,7 +269,7 @@ async def rules_callback_handler(call: CallbackQuery):
                                     message_id=call.message.message_id, reply_markup=rules())
         return
 
-    await call.answer(text='❌ Правила не были добавлены')
+    await call.answer(text='❌ Rules were not added')
 
 
 async def profile_callback_handler(call: CallbackQuery):
@@ -289,11 +289,11 @@ async def profile_callback_handler(call: CallbackQuery):
     items = select_user_items(user_id)
     referral = TgConfig.REFERRAL_PERCENT
     markup = profile(referral, items)
-    await bot.edit_message_text(text=f"👤 <b>Профиль</b> — {user.first_name}\n🆔"
+    await bot.edit_message_text(text=f"👤 <b>Profile</b> — {user.first_name}\n🆔"
                                      f" <b>ID</b> — <code>{user_id}</code>\n"
-                                     f"💳 <b>Баланс</b> — <code>{balance}</code> ₽\n"
-                                     f"💵 <b>Всего пополнено</b> — <code>{overall_balance}</code> ₽\n"
-                                     f" 🎁 <b>Куплено товаров</b> — {items} шт",
+                                     f"💳 <b>Balance</b> — <code>{balance}</code> €\n"
+                                     f"💵 <b>Total topped up</b> — <code>{overall_balance}</code> €\n"
+                                     f" 🎁 <b>Items purchased</b> — {items} pcs",
                                 chat_id=call.message.chat.id,
                                 message_id=call.message.message_id, reply_markup=markup,
                                 parse_mode='HTML')
@@ -304,12 +304,12 @@ async def referral_callback_handler(call: CallbackQuery):
     TgConfig.STATE[user_id] = None
     referrals = check_user_referrals(user_id)
     referral_percent = TgConfig.REFERRAL_PERCENT
-    await bot.edit_message_text(f'💚 Реферальная система\n'
-                                f'🔗 Ссылка: https://t.me/{await get_bot_info(call)}?start={user_id}\n'
-                                f'Количество рефералов: {referrals}\n'
-                                f'📔 Реферальная система позволит Вам заработать деньги без всяких вложений. '
-                                f'Необходимо всего лишь распространять свою реферальную ссылку и Вы будете получать'
-                                f' {referral_percent}% от суммы пополнений Ваших рефералов на Ваш баланс бота.',
+    await bot.edit_message_text(f'💚 Referral system\n'
+                                f'🔗 Link: https://t.me/{await get_bot_info(call)}?start={user_id}\n'
+                                f'Number of referrals: {referrals}\n'
+                                f'📔 The referral system allows you to earn money without investment. '
+                                f'Just share your referral link and you will receive'
+                                f' {referral_percent}% of your referrals top-ups to your bot balance.',
                                 chat_id=call.message.chat.id,
                                 message_id=call.message.message_id,
                                 reply_markup=back('profile'))
@@ -324,11 +324,11 @@ async def replenish_balance_callback_handler(call: CallbackQuery):
         TgConfig.STATE[user_id] = 'process_replenish_balance'
         await bot.edit_message_text(chat_id=call.message.chat.id,
                                     message_id=message_id,
-                                    text='💰 Введите сумму для пополнения:',
+                                    text='💰 Enter the top-up amount:',
                                     reply_markup=back('profile'))
         return
 
-    await call.answer('Пополнение не было настроено')
+    await call.answer('Top up was not configured')
 
 
 async def process_replenish_balance(message: Message):
@@ -342,8 +342,8 @@ async def process_replenish_balance(message: Message):
     if not text.isdigit() or int(text) < 20 or int(text) > 10000:
         await bot.edit_message_text(chat_id=message.chat.id,
                                     message_id=message_id,
-                                    text="❌ Неверная сумма пополнения. "
-                                         "Сумма пополнения должна быть числом не меньше 20₽ и не более 10 000₽",
+                                    text="❌ Invalid top-up amount. "
+                                         "The amount must be between 20€ and 10 000€",
                                     reply_markup=back('replenish_balance'))
         return
 
@@ -354,9 +354,9 @@ async def process_replenish_balance(message: Message):
     markup = payment_menu(url, label)
     await bot.edit_message_text(chat_id=message.chat.id,
                                 message_id=message_id,
-                                text=f'💵 Сумма пополнения: {text}₽.\n'
-                                     f'⌛️ У вас имеется {int(sleep_time / 60)} минут на оплату.\n'
-                                     f'<b>❗️ После оплаты нажмите кнопку «Проверить оплату»</b>',
+                                text=f'💵 Top-up amount: {text}€.\n'
+                                     f'⌛️ You have {int(sleep_time / 60)} minutes to pay.\n'
+                                     f'<b>❗️ After payment press "Check payment"</b>',
                                 reply_markup=markup)
     await asyncio.sleep(sleep_time)
     info = select_unfinished_operations(label)
@@ -388,20 +388,20 @@ async def checking_payment(call: CallbackQuery):
                 referral_operation = round((referral_percent/100) * operation_value)
                 update_balance(referral_id, referral_operation)
                 await bot.send_message(referral_id,
-                                       f'✅ Вы получили {referral_operation}₽ '
-                                       f'от вашего реферал {call.from_user.first_name}',
+                                       f'✅ You received {referral_operation}€ '
+                                       f'from your referral {call.from_user.first_name}',
                                        reply_markup=close())
 
             create_operation(user_id, operation_value, formatted_time)
             update_balance(user_id, operation_value)
             await bot.edit_message_text(chat_id=call.message.chat.id,
                                         message_id=message_id,
-                                        text=f'✅ Баланс пополнен на {operation_value}₽',
+                                        text=f'✅ Balance topped up by {operation_value}€',
                                         reply_markup=back('profile'))
         else:
-            await call.answer(text='❌ Оплата не прошла успешно')
+            await call.answer(text='❌ Payment was not successful')
     else:
-        await call.answer(text='❌ Счет не найден')
+        await call.answer(text='❌ Invoice not found')
 
 
 async def check_sub_to_channel(call: CallbackQuery):
@@ -417,10 +417,10 @@ async def check_sub_to_channel(call: CallbackQuery):
         user = check_user(call.from_user.id)
         role = user.role_id
         markup = main_menu(role, chat, helper)
-        await bot.edit_message_text('⛩️ Основное меню', chat_id=call.message.chat.id,
+        await bot.edit_message_text('⛩️ Main menu', chat_id=call.message.chat.id,
                                     message_id=call.message.message_id, reply_markup=markup)
     else:
-        await call.answer(text='Вы не подписались')
+        await call.answer(text='You did not subscribe')
 
 
 def register_user_handlers(dp: Dispatcher):
