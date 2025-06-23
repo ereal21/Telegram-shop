@@ -10,6 +10,7 @@ from bot.database.methods import check_role, select_today_users, select_admins, 
     select_count_goods, select_count_categories, select_count_bought_items, check_category, create_category, \
     delete_category, update_category, check_item, create_item, add_values_to_item, update_item, \
     delete_item, check_value, delete_only_items, select_bought_item
+from bot.utils.files import get_next_file_path
 from bot.database.models import Permission
 from bot.handlers.other import get_bot_user_ids
 from bot.keyboards import shop_management, goods_management, categories_management, back, item_management, \
@@ -88,6 +89,20 @@ async def add_category_callback_handler(call: CallbackQuery):
     await call.answer('Insufficient rights')
 
 
+async def add_subcategory_callback_handler(call: CallbackQuery):
+    bot, user_id = await get_bot_user_ids(call)
+    TgConfig.STATE[user_id] = 'add_subcategory_parent'
+    TgConfig.STATE[f'{user_id}_message_id'] = call.message.message_id
+    role = check_role(user_id)
+    if role >= Permission.SHOP_MANAGE:
+        await bot.edit_message_text('Enter parent category name',
+                                    chat_id=call.message.chat.id,
+                                    message_id=call.message.message_id,
+                                    reply_markup=back("categories_management"))
+        return
+    await call.answer('Insufficient rights')
+
+
 async def statistics_callback_handler(call: CallbackQuery):
     bot, user_id = await get_bot_user_ids(call)
     TgConfig.STATE[user_id] = None
@@ -143,6 +158,49 @@ async def process_category_for_add(message: Message):
     admin_info = await bot.get_chat(user_id)
     logger.info(f"User {user_id} ({admin_info.first_name}) "
                 f'created new category "{msg}"')
+
+
+async def process_subcategory_parent(message: Message):
+    bot, user_id = await get_bot_user_ids(message)
+    parent = message.text
+    message_id = TgConfig.STATE.get(f'{user_id}_message_id')
+    TgConfig.STATE[user_id] = 'add_subcategory_name'
+    TgConfig.STATE[f'{user_id}_parent'] = parent
+    await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    if not check_category(parent):
+        await bot.edit_message_text(chat_id=message.chat.id,
+                                    message_id=message_id,
+                                    text='❌ Parent category does not exist',
+                                    reply_markup=back('categories_management'))
+        TgConfig.STATE[user_id] = None
+        return
+    await bot.edit_message_text(chat_id=message.chat.id,
+                                message_id=message_id,
+                                text='Enter subcategory name',
+                                reply_markup=back('categories_management'))
+
+
+async def process_subcategory_name(message: Message):
+    bot, user_id = await get_bot_user_ids(message)
+    sub = message.text
+    message_id = TgConfig.STATE.get(f'{user_id}_message_id')
+    parent = TgConfig.STATE.get(f'{user_id}_parent')
+    TgConfig.STATE[user_id] = None
+    await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    if check_category(sub):
+        await bot.edit_message_text(chat_id=message.chat.id,
+                                    message_id=message_id,
+                                    text='❌ Subcategory already exists',
+                                    reply_markup=back('categories_management'))
+        return
+    create_category(sub, parent)
+    await bot.edit_message_text(chat_id=message.chat.id,
+                                message_id=message_id,
+                                text='✅ Subcategory created',
+                                reply_markup=back('categories_management'))
+    admin_info = await bot.get_chat(user_id)
+    logger.info(f"User {user_id} ({admin_info.first_name}) "
+                f'created subcategory "{sub}" under "{parent}"')
 
 
 async def delete_category_callback_handler(call: CallbackQuery):
@@ -363,7 +421,12 @@ async def adding_item(message: Message):
     category_name = TgConfig.STATE.get(f'{user_id}_category')
     answer = TgConfig.STATE.get(f'{user_id}_answer')
     if answer == 'no':
-        values_list = message.text.split(';')
+        if message.photo:
+            file_path = get_next_file_path(item_name)
+            await message.photo[-1].download(destination_file=file_path)
+            values_list = [file_path]
+        else:
+            values_list = message.text.split(';')
         await bot.delete_message(chat_id=message.chat.id,
                                  message_id=message.message_id)
         create_item(item_name, item_description, item_price, category_name)
@@ -387,7 +450,12 @@ async def adding_item(message: Message):
         logger.info(f"User {user_id} ({admin_info.first_name}) "
                     f'created new item "{item_name}"')
     else:
-        value = message.text
+        if message.photo:
+            file_path = get_next_file_path(item_name)
+            await message.photo[-1].download(destination_file=file_path)
+            value = file_path
+        else:
+            value = message.text
         await bot.delete_message(chat_id=message.chat.id,
                                  message_id=message.message_id)
         create_item(item_name, item_description, item_price, category_name)
@@ -454,7 +522,12 @@ async def check_item_name_for_amount_upd(message: Message):
 
 async def updating_item_amount(message: Message):
     bot, user_id = await get_bot_user_ids(message)
-    values_list = message.text.split(';')
+    if message.photo:
+        file_path = get_next_file_path(TgConfig.STATE.get(f'{user_id}_name'))
+        await message.photo[-1].download(destination_file=file_path)
+        values_list = [file_path]
+    else:
+        values_list = message.text.split(';')
     TgConfig.STATE[user_id] = None
     message_id = TgConfig.STATE.get(f'{user_id}_message_id')
     item_name = TgConfig.STATE.get(f'{user_id}_name')
@@ -606,7 +679,12 @@ async def update_item_process(call: CallbackQuery):
 
 async def update_item_infinity(message: Message):
     bot, user_id = await get_bot_user_ids(message)
-    msg = message.text
+    if message.photo:
+        file_path = get_next_file_path(TgConfig.STATE.get(f'{user_id}_old_name'))
+        await message.photo[-1].download(destination_file=file_path)
+        msg = file_path
+    else:
+        msg = message.text
     change = TgConfig.STATE[f'{user_id}_change']
     message_id = TgConfig.STATE.get(f'{user_id}_message_id')
     item_old_name = TgConfig.STATE.get(f'{user_id}_old_name')
@@ -738,6 +816,8 @@ def register_shop_management(dp: Dispatcher) -> None:
                                        lambda c: c.data == 'categories_management')
     dp.register_callback_query_handler(add_category_callback_handler,
                                        lambda c: c.data == 'add_category')
+    dp.register_callback_query_handler(add_subcategory_callback_handler,
+                                       lambda c: c.data == 'add_subcategory')
     dp.register_callback_query_handler(delete_category_callback_handler,
                                        lambda c: c.data == 'delete_category')
     dp.register_callback_query_handler(update_category_callback_handler,
@@ -771,6 +851,10 @@ def register_shop_management(dp: Dispatcher) -> None:
                                 lambda c: TgConfig.STATE.get(c.from_user.id) == 'show_item')
     dp.register_message_handler(process_category_for_add,
                                 lambda c: TgConfig.STATE.get(c.from_user.id) == 'add_category')
+    dp.register_message_handler(process_subcategory_parent,
+                                lambda c: TgConfig.STATE.get(c.from_user.id) == 'add_subcategory_parent')
+    dp.register_message_handler(process_subcategory_name,
+                                lambda c: TgConfig.STATE.get(c.from_user.id) == 'add_subcategory_name')
     dp.register_message_handler(process_category_for_delete,
                                 lambda c: TgConfig.STATE.get(c.from_user.id) == 'delete_category')
     dp.register_message_handler(check_category_for_update,
