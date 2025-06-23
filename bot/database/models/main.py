@@ -93,10 +93,12 @@ class User(Database.BASE):
 class Categories(Database.BASE):
     __tablename__ = 'categories'
     name = Column(String(100), primary_key=True, unique=True, nullable=False)
+    parent_name = Column(String(100), nullable=True)
     item = relationship("Goods", back_populates="category")
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, parent_name: str | None = None):
         self.name = name
+        self.parent_name = parent_name
 
 
 class Goods(Database.BASE):

@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from bot.localization import t
+from bot.database.methods import get_category_parent
 
 
 def main_menu(role: int, channel: str = None, helper: str = None, lang: str = 'en') -> InlineKeyboardMarkup:
@@ -54,6 +55,24 @@ def goods_list(list_items: list[str], category_name: str, current_index: int, ma
         ]
         markup.row(*buttons)
     markup.add(InlineKeyboardButton('🔙 Go back', callback_data='shop'))
+    return markup
+
+
+def subcategories_list(list_items: list[str], parent: str, current_index: int, max_index: int) -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup()
+    page_items = list_items[current_index * 10: (current_index + 1) * 10]
+    for name in page_items:
+        markup.add(InlineKeyboardButton(text=name, callback_data=f'category_{name}'))
+    if max_index > 0:
+        buttons = [
+            InlineKeyboardButton(text='◀️', callback_data=f'subcategories-page_{parent}_{current_index - 1}'),
+            InlineKeyboardButton(text=f'{current_index + 1}/{max_index + 1}', callback_data='dummy_button'),
+            InlineKeyboardButton(text='▶️', callback_data=f'subcategories-page_{parent}_{current_index + 1}')
+        ]
+        markup.row(*buttons)
+    back_parent = get_category_parent(parent)
+    back_data = 'shop' if back_parent is None else f'category_{back_parent}'
+    markup.add(InlineKeyboardButton('🔙 Go back', callback_data=back_data))
     return markup
 
 
@@ -192,9 +211,9 @@ def item_management() -> InlineKeyboardMarkup:
 def categories_management() -> InlineKeyboardMarkup:
     inline_keyboard = [
         [InlineKeyboardButton('add category', callback_data='add_category'),
-         InlineKeyboardButton('update category', callback_data='update_category'),
-         InlineKeyboardButton('delete category', callback_data='delete_category')
-         ],
+         InlineKeyboardButton('add subcategory', callback_data='add_subcategory')],
+        [InlineKeyboardButton('update category', callback_data='update_category'),
+         InlineKeyboardButton('delete category', callback_data='delete_category')],
         [InlineKeyboardButton('🔙 Go back', callback_data='shop_management')
          ]
     ]
