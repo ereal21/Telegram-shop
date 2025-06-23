@@ -57,7 +57,21 @@ def get_all_users() -> list[tuple[int]]:
 
 
 def get_all_categories() -> list[str]:
-    return [category[0] for category in Database().session.query(Categories.name).all()]
+    return [category[0] for category in
+            Database().session.query(Categories.name)
+            .filter(Categories.parent_name.is_(None)).all()]
+
+
+def get_subcategories(parent_name: str) -> list[str]:
+    return [category[0] for category in
+            Database().session.query(Categories.name)
+            .filter(Categories.parent_name == parent_name).all()]
+
+
+def get_category_parent(category_name: str) -> str | None:
+    result = (Database().session.query(Categories.parent_name)
+              .filter(Categories.name == category_name).first())
+    return result[0] if result else None
 
 
 def get_all_items(category_name: str) -> list[str]:

@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import os
 from urllib.parse import urlparse
 
 from aiogram import Dispatcher
@@ -11,9 +12,9 @@ from bot.database.methods import select_max_role_id, create_user, check_role, ch
     select_item_values_amount, get_user_balance, get_item_value, buy_item, add_bought_item, buy_item_for_balance, \
     select_user_operations, select_user_items, check_user_referrals, start_operation, \
     select_unfinished_operations, get_user_referral, finish_operation, update_balance, create_operation, \
-    bought_items_list, check_value
+    bought_items_list, check_value, get_subcategories, get_category_parent
 from bot.handlers.other import get_bot_user_ids, check_sub_channel, get_bot_info
-from bot.keyboards import check_sub, main_menu, categories_list, goods_list, user_items_list, back, item_info, \
+from bot.keyboards import check_sub, main_menu, categories_list, goods_list, subcategories_list, user_items_list, back, item_info, \
     profile, rules, payment_menu, close
 from bot.localization import t
 from bot.logger_mesh import logger
@@ -144,13 +145,24 @@ async def items_list_callback_handler(call: CallbackQuery):
     category_name = call.data[9:]
     bot, user_id = await get_bot_user_ids(call)
     TgConfig.STATE[user_id] = None
-    goods = get_all_items(category_name)
-    max_index = len(goods) // 10
-    if len(goods) % 10 == 0:
-        max_index -= 1
-    markup = goods_list(goods, category_name, 0, max_index)
-    await bot.edit_message_text('🏪 Select a product', chat_id=call.message.chat.id,
-                                message_id=call.message.message_id, reply_markup=markup)
+    subcategories = get_subcategories(category_name)
+    if subcategories:
+        max_index = len(subcategories) // 10
+        if len(subcategories) % 10 == 0:
+            max_index -= 1
+        markup = subcategories_list(subcategories, category_name, 0, max_index)
+        await bot.edit_message_text('🏪 Choose a subcategory',
+                                    chat_id=call.message.chat.id,
+                                    message_id=call.message.message_id,
+                                    reply_markup=markup)
+    else:
+        goods = get_all_items(category_name)
+        max_index = len(goods) // 10
+        if len(goods) % 10 == 0:
+            max_index -= 1
+        markup = goods_list(goods, category_name, 0, max_index)
+        await bot.edit_message_text('🏪 Select a product', chat_id=call.message.chat.id,
+                                    message_id=call.message.message_id, reply_markup=markup)
 
 
 async def navigate_goods(call: CallbackQuery):
@@ -166,6 +178,24 @@ async def navigate_goods(call: CallbackQuery):
         await bot.edit_message_text(message_id=call.message.message_id,
                                     chat_id=call.message.chat.id,
                                     text='🏪 Select a product',
+                                    reply_markup=markup)
+    else:
+        await bot.answer_callback_query(callback_query_id=call.id, text="❌ Page not found")
+
+
+async def navigate_subcategories(call: CallbackQuery):
+    bot, user_id = await get_bot_user_ids(call)
+    parent = call.data.split('_')[1]
+    current_index = int(call.data.split('_')[2])
+    subs = get_subcategories(parent)
+    max_index = len(subs) // 10
+    if len(subs) % 10 == 0:
+        max_index -= 1
+    if 0 <= current_index <= max_index:
+        markup = subcategories_list(subs, parent, current_index, max_index)
+        await bot.edit_message_text(message_id=call.message.message_id,
+                                    chat_id=call.message.chat.id,
+                                    text='🏪 Choose a subcategory',
                                     reply_markup=markup)
     else:
         await bot.answer_callback_query(callback_query_id=call.id, text="❌ Page not found")
@@ -208,12 +238,25 @@ async def buy_item_callback_handler(call: CallbackQuery):
             buy_item(value_data['id'], value_data['is_infinity'])
             add_bought_item(value_data['item_name'], value_data['value'], item_price, user_id, formatted_time)
             new_balance = buy_item_for_balance(user_id, item_price)
-            await bot.edit_message_text(chat_id=call.message.chat.id,
-                                        message_id=msg,
-                                        text=f'✅ Item purchased. '
-                                             f'<b>Balance</b>: <i>{new_balance}</i>€\n\n{value_data["value"]}',
-                                        parse_mode='HTML',
-                                        reply_markup=back(f'item_{item_name}'))
+            if os.path.isfile(value_data['value']):
+                with open(value_data['value'], 'rb') as photo:
+                    await bot.send_photo(
+                        chat_id=call.message.chat.id,
+                        photo=photo,
+                        caption=f'✅ Item purchased. '
+                                f'<b>Balance</b>: <i>{new_balance}</i>€')
+                os.remove(value_data['value'])
+                await bot.edit_message_text(chat_id=call.message.chat.id,
+                                            message_id=msg,
+                                            text='✅ Item purchased.',
+                                            reply_markup=back(f'item_{item_name}'))
+            else:
+                await bot.edit_message_text(chat_id=call.message.chat.id,
+                                            message_id=msg,
+                                            text=f'✅ Item purchased. '
+                                                 f'<b>Balance</b>: <i>{new_balance}</i>€\n\n{value_data["value"]}',
+                                            parse_mode='HTML',
+                                            reply_markup=back(f'item_{item_name}'))
             user_info = await bot.get_chat(user_id)
             logger.info(f"User {user_id} ({user_info.first_name})"
                         f" bought 1 item of {value_data['item_name']} for {item_price}€")
@@ -529,6 +572,8 @@ def register_user_handlers(dp: Dispatcher):
 
     dp.register_callback_query_handler(navigate_categories,
                                        lambda c: c.data.startswith('categories-page_'))
+    dp.register_callback_query_handler(navigate_subcategories,
+                                       lambda c: c.data.startswith('subcategories-page_'))
     dp.register_callback_query_handler(navigate_bought_items,
                                        lambda c: c.data.startswith('bought-goods-page_'))
     dp.register_callback_query_handler(navigate_goods,
