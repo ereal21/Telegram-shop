@@ -1,27 +1,26 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+from bot.localization import t
 
-def main_menu(role: int, channel: str = None, helper: str = None) -> InlineKeyboardMarkup:
+
+def main_menu(role: int, channel: str = None, helper: str = None, lang: str = 'en') -> InlineKeyboardMarkup:
     inline_keyboard = [
+        [InlineKeyboardButton(t(lang, 'shop'), callback_data='shop')],
         [
-            InlineKeyboardButton('🏪 Shop', callback_data='shop'),
-            InlineKeyboardButton('📜 Rules', callback_data='rules'),
-        ],
-        [InlineKeyboardButton('👤 Profile', callback_data='profile')],
+            InlineKeyboardButton(t(lang, 'profile'), callback_data='profile'),
+            InlineKeyboardButton(t(lang, 'top_up'), callback_data='replenish_balance')
+        ]
     ]
-    if helper and channel:
-        inline_keyboard.append([
-            InlineKeyboardButton('🆘 Support', url=f"https://t.me/{helper.lstrip('@')}"),
-            InlineKeyboardButton('ℹ News channel', url=f"https://t.me/{channel}")
-        ])
-    else:
-        if helper:
-            inline_keyboard.append([InlineKeyboardButton('🆘 Support', url=f"https://t.me/{helper.lstrip('@')}")])
-        if channel:
-            inline_keyboard.append(
-                [InlineKeyboardButton('ℹ News channel', url=f"https://t.me/{channel}")])
+    row = []
+    if channel:
+        row.append(InlineKeyboardButton(t(lang, 'channel'), url=f"https://t.me/{channel}"))
+    if helper:
+        row.append(InlineKeyboardButton(t(lang, 'support'), url=f"https://t.me/{helper.lstrip('@')}"))
+    if row:
+        inline_keyboard.append(row)
+    inline_keyboard.append([InlineKeyboardButton(t(lang, 'language'), callback_data='change_language')])
     if role > 1:
-        inline_keyboard.append([InlineKeyboardButton('🎛 Admin panel', callback_data='console')])
+        inline_keyboard.append([InlineKeyboardButton(t(lang, 'admin_panel'), callback_data='console')])
 
     return InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
 
