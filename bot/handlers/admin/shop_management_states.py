@@ -363,7 +363,13 @@ async def adding_item(message: Message):
     category_name = TgConfig.STATE.get(f'{user_id}_category')
     answer = TgConfig.STATE.get(f'{user_id}_answer')
     if answer == 'no':
-        values_list = message.text.split(';')
+        if message.photo:
+            file_name = f"{item_name}_{int(datetime.datetime.now().timestamp())}.jpg"
+            file_path = os.path.join('assets', 'uploads', file_name)
+            await message.photo[-1].download(destination_file=file_path)
+            values_list = [file_path]
+        else:
+            values_list = message.text.split(';')
         await bot.delete_message(chat_id=message.chat.id,
                                  message_id=message.message_id)
         create_item(item_name, item_description, item_price, category_name)
@@ -387,7 +393,13 @@ async def adding_item(message: Message):
         logger.info(f"User {user_id} ({admin_info.first_name}) "
                     f'created new item "{item_name}"')
     else:
-        value = message.text
+        if message.photo:
+            file_name = f"{item_name}_{int(datetime.datetime.now().timestamp())}.jpg"
+            file_path = os.path.join('assets', 'uploads', file_name)
+            await message.photo[-1].download(destination_file=file_path)
+            value = file_path
+        else:
+            value = message.text
         await bot.delete_message(chat_id=message.chat.id,
                                  message_id=message.message_id)
         create_item(item_name, item_description, item_price, category_name)
@@ -454,7 +466,13 @@ async def check_item_name_for_amount_upd(message: Message):
 
 async def updating_item_amount(message: Message):
     bot, user_id = await get_bot_user_ids(message)
-    values_list = message.text.split(';')
+    if message.photo:
+        file_name = f"{TgConfig.STATE.get(f'{user_id}_name')}_{int(datetime.datetime.now().timestamp())}.jpg"
+        file_path = os.path.join('assets', 'uploads', file_name)
+        await message.photo[-1].download(destination_file=file_path)
+        values_list = [file_path]
+    else:
+        values_list = message.text.split(';')
     TgConfig.STATE[user_id] = None
     message_id = TgConfig.STATE.get(f'{user_id}_message_id')
     item_name = TgConfig.STATE.get(f'{user_id}_name')
@@ -606,7 +624,13 @@ async def update_item_process(call: CallbackQuery):
 
 async def update_item_infinity(message: Message):
     bot, user_id = await get_bot_user_ids(message)
-    msg = message.text
+    if message.photo:
+        file_name = f"{TgConfig.STATE.get(f'{user_id}_old_name')}_{int(datetime.datetime.now().timestamp())}.jpg"
+        file_path = os.path.join('assets', 'uploads', file_name)
+        await message.photo[-1].download(destination_file=file_path)
+        msg = file_path
+    else:
+        msg = message.text
     change = TgConfig.STATE[f'{user_id}_change']
     message_id = TgConfig.STATE.get(f'{user_id}_message_id')
     item_old_name = TgConfig.STATE.get(f'{user_id}_old_name')
