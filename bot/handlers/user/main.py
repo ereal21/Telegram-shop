@@ -244,12 +244,19 @@ async def buy_item_callback_handler(call: CallbackQuery):
                         photo=photo,
                         caption=f'✅ Item purchased. '
                                 f'<b>Balance</b>: <i>{new_balance}</i>€')
+jfweem-codex/add-image-support-to-product-categories
+
+                os.remove(value_data['value'])
+main
                 await bot.edit_message_text(chat_id=call.message.chat.id,
                                             message_id=msg,
                                             text='✅ Item purchased.',
                                             reply_markup=back(f'item_{item_name}'))
+jfweem-codex/add-image-support-to-product-categories
                 buy_item(value_data['id'], value_data['is_infinity'])
                 cleanup_item_file(value_data['value'])
+
+main
             else:
                 await bot.edit_message_text(chat_id=call.message.chat.id,
                                             message_id=msg,
@@ -257,8 +264,11 @@ async def buy_item_callback_handler(call: CallbackQuery):
                                                  f'<b>Balance</b>: <i>{new_balance}</i>€\n\n{value_data["value"]}',
                                             parse_mode='HTML',
                                             reply_markup=back(f'item_{item_name}'))
+jfweem-codex/add-image-support-to-product-categories
                 buy_item(value_data['id'], value_data['is_infinity'])
             add_bought_item(value_data['item_name'], value_data['value'], item_price, user_id, formatted_time)
+
+main
             user_info = await bot.get_chat(user_id)
             logger.info(f"User {user_id} ({user_info.first_name})"
                         f" bought 1 item of {value_data['item_name']} for {item_price}€")
