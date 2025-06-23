@@ -1,5 +1,11 @@
 import os
+tmd7s8-codex/add-image-support-to-product-categories
 from bot.utils.files import sanitize_name
+
+jfweem-codex/add-image-support-to-product-categories
+from bot.utils.files import sanitize_name
+main
+main
 from bot.database.models import Database, Goods, ItemValues, Categories, UnfinishedOperations
 
 
@@ -57,6 +63,22 @@ def buy_item(item_id: str, infinity: bool = False) -> None:
 
     File cleanup is handled after successful delivery to the user."""
     if infinity is False:
+tmd7s8-codex/add-image-support-to-product-categories
         session = Database().session
         session.query(ItemValues).filter(ItemValues.id == item_id).delete()
         session.commit()
+
+jfweem-codex/add-image-support-to-product-categories
+        session = Database().session
+        session.query(ItemValues).filter(ItemValues.id == item_id).delete()
+        session.commit()
+
+        value = Database().session.query(ItemValues.value).filter(ItemValues.id == item_id).first()
+        if value and os.path.isfile(value[0]):
+            os.remove(value[0])
+        Database().session.query(ItemValues).filter(ItemValues.id == item_id).delete()
+        Database().session.commit()
+    else:
+        pass
+main
+main
