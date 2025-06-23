@@ -3,7 +3,7 @@ import datetime
 from urllib.parse import urlparse
 
 from aiogram import Dispatcher
-from aiogram.types import Message, CallbackQuery, ChatType
+from aiogram.types import Message, CallbackQuery, ChatType, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.exceptions import ChatNotFound
 
 from bot.database.methods import select_max_role_id, create_user, check_role, check_user, \
@@ -15,6 +15,7 @@ from bot.database.methods import select_max_role_id, create_user, check_role, ch
 from bot.handlers.other import get_bot_user_ids, check_sub_channel, get_bot_info
 from bot.keyboards import check_sub, main_menu, categories_list, goods_list, user_items_list, back, item_info, \
     profile, rules, payment_menu, close
+from bot.localization import t
 from bot.logger_mesh import logger
 from bot.misc import TgConfig, EnvKeys
 from bot.misc.payment import quick_pay, check_payment_status
@@ -52,18 +53,45 @@ async def start(message: Message):
     except ChatNotFound:
         pass
 
-    markup = main_menu(role_data, chat, TgConfig.HELPER_URL)
-    await bot.send_message(user_id,
-                           '⛩️ Main menu',
-                           reply_markup=markup)
+    user_lang = TgConfig.STATE.get(f'language_{user_id}')
+    if not user_lang:
+        lang_markup = InlineKeyboardMarkup(row_width=1)
+        lang_markup.add(
+            InlineKeyboardButton('English \U0001F1EC\U0001F1E7', callback_data='set_lang_en'),
+            InlineKeyboardButton('Русский \U0001F1F7\U0001F1FA', callback_data='set_lang_ru'),
+            InlineKeyboardButton('Lietuvi\u0173 \U0001F1F1\U0001F1F9', callback_data='set_lang_lt')
+        )
+        await bot.send_message(user_id,
+                               f"{t('en', 'choose_language')} / {t('ru', 'choose_language')} / {t('lt', 'choose_language')}",
+                               reply_markup=lang_markup)
+        await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+        return
+
+    user = check_user(user_id)
+    balance = user.balance if user else 0
+    markup = main_menu(role_data, chat, TgConfig.HELPER_URL, user_lang)
+    text = (
+        f"{t(user_lang, 'hello', user=message.from_user.first_name)}\n"
+        f"{t(user_lang, 'balance', balance=f'{balance:.2f}')}\n"
+        f"{t(user_lang, 'basket', items=0)}\n\n"
+        f"{t(user_lang, 'overpay')}"
+    )
+    await bot.send_message(user_id, text, reply_markup=markup)
     await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
 
 
 async def back_to_menu_callback_handler(call: CallbackQuery):
     bot, user_id = await get_bot_user_ids(call)
     user = check_user(call.from_user.id)
-    markup = main_menu(user.role_id, TgConfig.CHANNEL_URL, TgConfig.HELPER_URL)
-    await bot.edit_message_text('⛩️ Main menu',
+    user_lang = TgConfig.STATE.get(f'language_{user_id}', 'en')
+    markup = main_menu(user.role_id, TgConfig.CHANNEL_URL, TgConfig.HELPER_URL, user_lang)
+    text = (
+        f"{t(user_lang, 'hello', user=call.from_user.first_name)}\n"
+        f"{t(user_lang, 'balance', balance=f'{user.balance:.2f}')}\n"
+        f"{t(user_lang, 'basket', items=0)}\n\n"
+        f"{t(user_lang, 'overpay')}"
+    )
+    await bot.edit_message_text(text,
                                 chat_id=call.message.chat.id,
                                 message_id=call.message.message_id,
                                 reply_markup=markup)
@@ -416,11 +444,58 @@ async def check_sub_to_channel(call: CallbackQuery):
     if await check_sub_channel(chat_member):
         user = check_user(call.from_user.id)
         role = user.role_id
-        markup = main_menu(role, chat, helper)
-        await bot.edit_message_text('⛩️ Main menu', chat_id=call.message.chat.id,
+        lang = TgConfig.STATE.get(f'language_{user_id}', 'en')
+        markup = main_menu(role, chat, helper, lang)
+        text = (
+            f"{t(lang, 'hello', user=call.from_user.first_name)}\n"
+            f"{t(lang, 'balance', balance=f'{user.balance:.2f}')}\n"
+            f"{t(lang, 'basket', items=0)}\n\n"
+            f"{t(lang, 'overpay')}"
+        )
+        await bot.edit_message_text(text, chat_id=call.message.chat.id,
                                     message_id=call.message.message_id, reply_markup=markup)
     else:
         await call.answer(text='You did not subscribe')
+
+
+async def change_language(call: CallbackQuery):
+    bot, user_id = await get_bot_user_ids(call)
+    current_lang = TgConfig.STATE.get(f'language_{user_id}', 'en')
+    markup = InlineKeyboardMarkup(row_width=1)
+    markup.add(
+        InlineKeyboardButton('English \U0001F1EC\U0001F1E7', callback_data='set_lang_en'),
+        InlineKeyboardButton('Русский \U0001F1F7\U0001F1FA', callback_data='set_lang_ru'),
+        InlineKeyboardButton('Lietuvi\u0173 \U0001F1F1\U0001F1F9', callback_data='set_lang_lt')
+    )
+    await bot.edit_message_text(
+        t(current_lang, 'choose_language'),
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        reply_markup=markup
+    )
+
+
+async def set_language(call: CallbackQuery):
+    bot, user_id = await get_bot_user_ids(call)
+    lang_code = call.data.split('_')[-1]
+    TgConfig.STATE[f'language_{user_id}'] = lang_code
+    role = check_role(user_id)
+    chat = TgConfig.CHANNEL_URL[13:]
+    user = check_user(user_id)
+    balance = user.balance if user else 0
+    markup = main_menu(role, chat, TgConfig.HELPER_URL, lang_code)
+    text = (
+        f"{t(lang_code, 'hello', user=call.from_user.first_name)}\n"
+        f"{t(lang_code, 'balance', balance=f'{balance:.2f}')}\n"
+        f"{t(lang_code, 'basket', items=0)}\n\n"
+        f"{t(lang_code, 'overpay')}"
+    )
+    await bot.edit_message_text(
+        text,
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        reply_markup=markup
+    )
 
 
 def register_user_handlers(dp: Dispatcher):
@@ -447,6 +522,10 @@ def register_user_handlers(dp: Dispatcher):
                                        lambda c: c.data == 'back_to_menu')
     dp.register_callback_query_handler(close_callback_handler,
                                        lambda c: c.data == 'close')
+    dp.register_callback_query_handler(change_language,
+                                       lambda c: c.data == 'change_language')
+    dp.register_callback_query_handler(set_language,
+                                       lambda c: c.data.startswith('set_lang_'))
 
     dp.register_callback_query_handler(navigate_categories,
                                        lambda c: c.data.startswith('categories-page_'))
