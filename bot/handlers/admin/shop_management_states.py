@@ -422,11 +422,15 @@ async def adding_item(message: Message):
     answer = TgConfig.STATE.get(f'{user_id}_answer')
     if answer == 'no':
         if message.photo:
+tmd7s8-codex/add-image-support-to-product-categories
+            file_path = get_next_file_path(item_name)
+
 jfweem-codex/add-image-support-to-product-categories
             file_path = get_next_file_path(item_name)
 
             file_name = f"{item_name}_{int(datetime.datetime.now().timestamp())}.jpg"
             file_path = os.path.join('assets', 'uploads', file_name)
+main
 main
             await message.photo[-1].download(destination_file=file_path)
             values_list = [file_path]
@@ -456,11 +460,15 @@ main
                     f'created new item "{item_name}"')
     else:
         if message.photo:
+tmd7s8-codex/add-image-support-to-product-categories
+            file_path = get_next_file_path(item_name)
+
 jfweem-codex/add-image-support-to-product-categories
             file_path = get_next_file_path(item_name)
 
             file_name = f"{item_name}_{int(datetime.datetime.now().timestamp())}.jpg"
             file_path = os.path.join('assets', 'uploads', file_name)
+main
 main
             await message.photo[-1].download(destination_file=file_path)
             value = file_path
@@ -533,11 +541,15 @@ async def check_item_name_for_amount_upd(message: Message):
 async def updating_item_amount(message: Message):
     bot, user_id = await get_bot_user_ids(message)
     if message.photo:
+tmd7s8-codex/add-image-support-to-product-categories
+        file_path = get_next_file_path(TgConfig.STATE.get(f'{user_id}_name'))
+
 jfweem-codex/add-image-support-to-product-categories
         file_path = get_next_file_path(TgConfig.STATE.get(f'{user_id}_name'))
 
         file_name = f"{TgConfig.STATE.get(f'{user_id}_name')}_{int(datetime.datetime.now().timestamp())}.jpg"
         file_path = os.path.join('assets', 'uploads', file_name)
+main
 main
         await message.photo[-1].download(destination_file=file_path)
         values_list = [file_path]
@@ -695,11 +707,15 @@ async def update_item_process(call: CallbackQuery):
 async def update_item_infinity(message: Message):
     bot, user_id = await get_bot_user_ids(message)
     if message.photo:
+tmd7s8-codex/add-image-support-to-product-categories
+        file_path = get_next_file_path(TgConfig.STATE.get(f'{user_id}_old_name'))
+
 jfweem-codex/add-image-support-to-product-categories
         file_path = get_next_file_path(TgConfig.STATE.get(f'{user_id}_old_name'))
 
         file_name = f"{TgConfig.STATE.get(f'{user_id}_old_name')}_{int(datetime.datetime.now().timestamp())}.jpg"
         file_path = os.path.join('assets', 'uploads', file_name)
+main
 main
         await message.photo[-1].download(destination_file=file_path)
         msg = file_path
