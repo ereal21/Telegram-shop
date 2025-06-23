@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import os
 from urllib.parse import urlparse
 
 from aiogram import Dispatcher
@@ -208,12 +209,25 @@ async def buy_item_callback_handler(call: CallbackQuery):
             buy_item(value_data['id'], value_data['is_infinity'])
             add_bought_item(value_data['item_name'], value_data['value'], item_price, user_id, formatted_time)
             new_balance = buy_item_for_balance(user_id, item_price)
-            await bot.edit_message_text(chat_id=call.message.chat.id,
-                                        message_id=msg,
-                                        text=f'✅ Item purchased. '
-                                             f'<b>Balance</b>: <i>{new_balance}</i>€\n\n{value_data["value"]}',
-                                        parse_mode='HTML',
-                                        reply_markup=back(f'item_{item_name}'))
+            if os.path.isfile(value_data['value']):
+                with open(value_data['value'], 'rb') as photo:
+                    await bot.send_photo(
+                        chat_id=call.message.chat.id,
+                        photo=photo,
+                        caption=f'✅ Item purchased. '
+                                f'<b>Balance</b>: <i>{new_balance}</i>€')
+                os.remove(value_data['value'])
+                await bot.edit_message_text(chat_id=call.message.chat.id,
+                                            message_id=msg,
+                                            text='✅ Item purchased.',
+                                            reply_markup=back(f'item_{item_name}'))
+            else:
+                await bot.edit_message_text(chat_id=call.message.chat.id,
+                                            message_id=msg,
+                                            text=f'✅ Item purchased. '
+                                                 f'<b>Balance</b>: <i>{new_balance}</i>€\n\n{value_data["value"]}',
+                                            parse_mode='HTML',
+                                            reply_markup=back(f'item_{item_name}'))
             user_info = await bot.get_chat(user_id)
             logger.info(f"User {user_id} ({user_info.first_name})"
                         f" bought 1 item of {value_data['item_name']} for {item_price}€")
